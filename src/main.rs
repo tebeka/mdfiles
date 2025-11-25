@@ -12,6 +12,9 @@ struct Args {
 
     #[arg(short, long, value_name = "SUFFIX", default_value = ".go", help = "File suffix to match")]
     suffix: String,
+
+    #[arg(short, long, value_name = "ROOT", default_value = ".", help = "Root directory to start search from")]
+    root: String,
 }
 
 fn get_date(date_str: Option<&str>) -> Result<NaiveDate, String> {
@@ -20,6 +23,16 @@ fn get_date(date_str: Option<&str>) -> Result<NaiveDate, String> {
             .map_err(|_| "Invalid date format. Use YYYY-MM-DD".to_string()),
         None => Ok(chrono::Local::now().date_naive()),
     }
+}
+
+fn format_as_markdown(path: &str) -> String {
+    let path_obj = Path::new(path);
+    let filename = path_obj
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or(path);
+
+    format!("- [{}]({})", filename, path)
 }
 
 fn find_files_by_date(start_path: &Path, target_date: NaiveDate, suffix: &str) -> Result<Vec<String>, String> {
@@ -70,10 +83,16 @@ fn main() {
         }
     };
 
-    match find_files_by_date(Path::new("."), date, &args.suffix) {
+    let root_path = Path::new(&args.root);
+    if !root_path.exists() {
+        eprintln!("Error: Root directory '{}' does not exist", args.root);
+        std::process::exit(1);
+    }
+
+    match find_files_by_date(root_path, date, &args.suffix) {
         Ok(files) => {
             for file in files {
-                println!("{}", file);
+                println!("{}", format_as_markdown(&file));
             }
         }
         Err(e) => {
@@ -126,6 +145,30 @@ mod tests {
     fn test_default_date_returns_some() {
         let result = get_date(None);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_format_as_markdown_simple_path() {
+        let result = format_as_markdown("src/main.rs");
+        assert_eq!(result, "- [main.rs](src/main.rs)");
+    }
+
+    #[test]
+    fn test_format_as_markdown_nested_path() {
+        let result = format_as_markdown("./src/some/nested/file.go");
+        assert_eq!(result, "- [file.go](./src/some/nested/file.go)");
+    }
+
+    #[test]
+    fn test_format_as_markdown_relative_path() {
+        let result = format_as_markdown("./tests/cli.rs");
+        assert_eq!(result, "- [cli.rs](./tests/cli.rs)");
+    }
+
+    #[test]
+    fn test_format_as_markdown_filename_only() {
+        let result = format_as_markdown("Cargo.toml");
+        assert_eq!(result, "- [Cargo.toml](Cargo.toml)");
     }
 
     #[test]
@@ -206,5 +249,43 @@ mod tests {
         let result = find_files_by_date(temp_dir.path(), today, ".go").unwrap();
 
         assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_find_files_with_custom_root() {
+        let temp_dir = TempDir::new().unwrap();
+        let subdir = temp_dir.path().join("subdir");
+        std::fs::create_dir(&subdir).unwrap();
+
+        File::create(temp_dir.path().join("root.txt")).unwrap();
+        File::create(subdir.join("sub.txt")).unwrap();
+
+        let today = Local::now().date_naive();
+
+        // Search from root - should find both
+        let result = find_files_by_date(temp_dir.path(), today, ".txt").unwrap();
+        assert_eq!(result.len(), 2);
+
+        // Search from subdir - should find only sub.txt
+        let result = find_files_by_date(&subdir, today, ".txt").unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].contains("sub.txt"));
+    }
+
+    #[test]
+    fn test_find_files_nested_directories() {
+        let temp_dir = TempDir::new().unwrap();
+        let level1 = temp_dir.path().join("level1");
+        let level2 = level1.join("level2");
+        std::fs::create_dir_all(&level2).unwrap();
+
+        File::create(temp_dir.path().join("file0.go")).unwrap();
+        File::create(level1.join("file1.go")).unwrap();
+        File::create(level2.join("file2.go")).unwrap();
+
+        let today = Local::now().date_naive();
+        let result = find_files_by_date(temp_dir.path(), today, ".go").unwrap();
+
+        assert_eq!(result.len(), 3);
     }
 }

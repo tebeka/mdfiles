@@ -83,7 +83,8 @@ fn test_help_flag() {
         .assert()
         .success()
         .stdout(predicate::str::contains("Date in YYYY-MM-DD format"))
-        .stdout(predicate::str::contains("File suffix to match"));
+        .stdout(predicate::str::contains("File suffix to match"))
+        .stdout(predicate::str::contains("Root directory to start search from"));
 }
 
 #[test]
@@ -100,4 +101,39 @@ fn test_no_args_with_current_directory() {
     let mut cmd = Command::cargo_bin("mdfiles").unwrap();
     cmd.assert().success();
     // Should succeed and may or may not find files depending on current directory
+}
+
+#[test]
+fn test_root_long_flag() {
+    let mut cmd = Command::cargo_bin("mdfiles").unwrap();
+    cmd.arg("--root").arg("./src")
+        .assert()
+        .success();
+}
+
+#[test]
+fn test_root_short_flag() {
+    let mut cmd = Command::cargo_bin("mdfiles").unwrap();
+    cmd.arg("-r").arg("./target")
+        .assert()
+        .success();
+}
+
+#[test]
+fn test_nonexistent_root_directory() {
+    let mut cmd = Command::cargo_bin("mdfiles").unwrap();
+    cmd.arg("--root").arg("/nonexistent/path/that/does/not/exist")
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("does not exist"));
+}
+
+#[test]
+fn test_all_options_together() {
+    let mut cmd = Command::cargo_bin("mdfiles").unwrap();
+    cmd.arg("-d").arg("2025-11-25")
+        .arg("-s").arg(".rs")
+        .arg("-r").arg("./src")
+        .assert()
+        .success();
 }
