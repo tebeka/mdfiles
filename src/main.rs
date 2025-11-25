@@ -9,6 +9,9 @@ use walkdir::WalkDir;
 struct Args {
     #[arg(short, long, value_name = "DATE", help = "Date in YYYY-MM-DD format")]
     date: Option<String>,
+
+    #[arg(short, long, value_name = "SUFFIX", default_value = ".go", help = "File suffix to match")]
+    suffix: String,
 }
 
 fn get_date(date_str: Option<&str>) -> Result<NaiveDate, String> {
@@ -19,7 +22,7 @@ fn get_date(date_str: Option<&str>) -> Result<NaiveDate, String> {
     }
 }
 
-fn find_files_by_date(start_path: &Path, target_date: NaiveDate) -> Result<Vec<String>, String> {
+fn find_files_by_date(start_path: &Path, target_date: NaiveDate, suffix: &str) -> Result<Vec<String>, String> {
     let mut matching_files = Vec::new();
 
     for entry in WalkDir::new(start_path)
@@ -27,13 +30,24 @@ fn find_files_by_date(start_path: &Path, target_date: NaiveDate) -> Result<Vec<S
         .filter_map(|e| e.ok())
     {
         if entry.file_type().is_file() {
-            if let Ok(metadata) = fs::metadata(entry.path()) {
+            let path = entry.path();
+
+            // Check if file has the required suffix
+            if let Some(file_name) = path.file_name() {
+                if let Some(name_str) = file_name.to_str() {
+                    if !name_str.ends_with(suffix) {
+                        continue;
+                    }
+                }
+            }
+
+            if let Ok(metadata) = fs::metadata(path) {
                 if let Ok(modified) = metadata.modified() {
                     let datetime: DateTime<Local> = modified.into();
                     let file_date = datetime.date_naive();
 
                     if file_date == target_date {
-                        if let Some(path_str) = entry.path().to_str() {
+                        if let Some(path_str) = path.to_str() {
                             matching_files.push(path_str.to_string());
                         }
                     }
@@ -56,7 +70,7 @@ fn main() {
         }
     };
 
-    match find_files_by_date(Path::new("."), date) {
+    match find_files_by_date(Path::new("."), date, &args.suffix) {
         Ok(files) => {
             for file in files {
                 println!("{}", file);
@@ -118,7 +132,7 @@ mod tests {
     fn test_find_files_returns_ok() {
         let temp_dir = TempDir::new().unwrap();
         let date = Local::now().date_naive();
-        let result = find_files_by_date(temp_dir.path(), date);
+        let result = find_files_by_date(temp_dir.path(), date, ".txt");
         assert!(result.is_ok());
     }
 
@@ -131,7 +145,7 @@ mod tests {
         drop(file);
 
         let today = Local::now().date_naive();
-        let result = find_files_by_date(temp_dir.path(), today).unwrap();
+        let result = find_files_by_date(temp_dir.path(), today, ".txt").unwrap();
 
         assert!(result.iter().any(|p| p.contains("test.txt")));
     }
@@ -140,7 +154,7 @@ mod tests {
     fn test_find_files_empty_directory() {
         let temp_dir = TempDir::new().unwrap();
         let date = Local::now().date_naive();
-        let result = find_files_by_date(temp_dir.path(), date).unwrap();
+        let result = find_files_by_date(temp_dir.path(), date, ".txt").unwrap();
         assert_eq!(result.len(), 0);
     }
 
@@ -151,7 +165,45 @@ mod tests {
         File::create(&file_path).unwrap();
 
         let old_date = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
-        let result = find_files_by_date(temp_dir.path(), old_date).unwrap();
+        let result = find_files_by_date(temp_dir.path(), old_date, ".txt").unwrap();
+
+        assert_eq!(result.len(), 0);
+    }
+
+    #[test]
+    fn test_find_files_with_suffix_filter() {
+        let temp_dir = TempDir::new().unwrap();
+
+        // Create files with different suffixes
+        File::create(temp_dir.path().join("test.go")).unwrap();
+        File::create(temp_dir.path().join("test.txt")).unwrap();
+        File::create(temp_dir.path().join("test.rs")).unwrap();
+
+        let today = Local::now().date_naive();
+
+        // Test .go suffix
+        let result = find_files_by_date(temp_dir.path(), today, ".go").unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].ends_with(".go"));
+
+        // Test .txt suffix
+        let result = find_files_by_date(temp_dir.path(), today, ".txt").unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].ends_with(".txt"));
+
+        // Test .rs suffix
+        let result = find_files_by_date(temp_dir.path(), today, ".rs").unwrap();
+        assert_eq!(result.len(), 1);
+        assert!(result[0].ends_with(".rs"));
+    }
+
+    #[test]
+    fn test_find_files_no_matching_suffix() {
+        let temp_dir = TempDir::new().unwrap();
+        File::create(temp_dir.path().join("test.txt")).unwrap();
+
+        let today = Local::now().date_naive();
+        let result = find_files_by_date(temp_dir.path(), today, ".go").unwrap();
 
         assert_eq!(result.len(), 0);
     }
