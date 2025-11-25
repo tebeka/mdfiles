@@ -10,10 +10,22 @@ struct Args {
     #[arg(short, long, value_name = "DATE", help = "Date in YYYY-MM-DD format")]
     date: Option<String>,
 
-    #[arg(short, long, value_name = "SUFFIX", default_value = ".go", help = "File suffix to match")]
+    #[arg(
+        short,
+        long,
+        value_name = "SUFFIX",
+        default_value = ".go",
+        help = "File suffix to match"
+    )]
     suffix: String,
 
-    #[arg(short, long, value_name = "ROOT", default_value = ".", help = "Root directory to start search from")]
+    #[arg(
+        short,
+        long,
+        value_name = "ROOT",
+        default_value = ".",
+        help = "Root directory to start search from"
+    )]
     root: String,
 }
 
@@ -35,13 +47,14 @@ fn format_as_markdown(path: &str) -> String {
     format!("- [{}]({})", filename, path)
 }
 
-fn find_files_by_date(start_path: &Path, target_date: NaiveDate, suffix: &str) -> Result<Vec<String>, String> {
+fn find_files_by_date(
+    start_path: &Path,
+    target_date: NaiveDate,
+    suffix: &str,
+) -> Result<Vec<String>, String> {
     let mut matching_files = Vec::new();
 
-    for entry in WalkDir::new(start_path)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
+    for entry in WalkDir::new(start_path).into_iter().filter_map(|e| e.ok()) {
         if entry.file_type().is_file() {
             let path = entry.path();
 
