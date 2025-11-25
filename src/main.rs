@@ -47,7 +47,7 @@ fn format_as_markdown(path: &str) -> String {
     format!("- [{}]({})", filename, path)
 }
 
-fn find_files_by_date(
+fn find_files(
     start_path: &Path,
     target_date: NaiveDate,
     suffix: &str,
@@ -111,7 +111,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    match find_files_by_date(root_path, date, &args.suffix) {
+    match find_files(root_path, date, &args.suffix) {
         Ok(files) => {
             for file in files {
                 println!("{}", format_as_markdown(&file));
@@ -197,7 +197,7 @@ mod tests {
     fn test_find_files_returns_ok() {
         let temp_dir = TempDir::new().unwrap();
         let date = Local::now().date_naive();
-        let result = find_files_by_date(temp_dir.path(), date, ".txt");
+        let result = find_files(temp_dir.path(), date, ".txt");
         assert!(result.is_ok());
     }
 
@@ -210,7 +210,7 @@ mod tests {
         drop(file);
 
         let today = Local::now().date_naive();
-        let result = find_files_by_date(temp_dir.path(), today, ".txt").unwrap();
+        let result = find_files(temp_dir.path(), today, ".txt").unwrap();
 
         assert!(result.iter().any(|p| p.contains("test.txt")));
     }
@@ -219,7 +219,7 @@ mod tests {
     fn test_find_files_empty_directory() {
         let temp_dir = TempDir::new().unwrap();
         let date = Local::now().date_naive();
-        let result = find_files_by_date(temp_dir.path(), date, ".txt").unwrap();
+        let result = find_files(temp_dir.path(), date, ".txt").unwrap();
         assert_eq!(result.len(), 0);
     }
 
@@ -230,7 +230,7 @@ mod tests {
         File::create(&file_path).unwrap();
 
         let old_date = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
-        let result = find_files_by_date(temp_dir.path(), old_date, ".txt").unwrap();
+        let result = find_files(temp_dir.path(), old_date, ".txt").unwrap();
 
         assert_eq!(result.len(), 0);
     }
@@ -247,17 +247,17 @@ mod tests {
         let today = Local::now().date_naive();
 
         // Test .go suffix
-        let result = find_files_by_date(temp_dir.path(), today, ".go").unwrap();
+        let result = find_files(temp_dir.path(), today, ".go").unwrap();
         assert_eq!(result.len(), 1);
         assert!(result[0].ends_with(".go"));
 
         // Test .txt suffix
-        let result = find_files_by_date(temp_dir.path(), today, ".txt").unwrap();
+        let result = find_files(temp_dir.path(), today, ".txt").unwrap();
         assert_eq!(result.len(), 1);
         assert!(result[0].ends_with(".txt"));
 
         // Test .rs suffix
-        let result = find_files_by_date(temp_dir.path(), today, ".rs").unwrap();
+        let result = find_files(temp_dir.path(), today, ".rs").unwrap();
         assert_eq!(result.len(), 1);
         assert!(result[0].ends_with(".rs"));
     }
@@ -268,7 +268,7 @@ mod tests {
         File::create(temp_dir.path().join("test.txt")).unwrap();
 
         let today = Local::now().date_naive();
-        let result = find_files_by_date(temp_dir.path(), today, ".go").unwrap();
+        let result = find_files(temp_dir.path(), today, ".go").unwrap();
 
         assert_eq!(result.len(), 0);
     }
@@ -285,11 +285,11 @@ mod tests {
         let today = Local::now().date_naive();
 
         // Search from root - should find both
-        let result = find_files_by_date(temp_dir.path(), today, ".txt").unwrap();
+        let result = find_files(temp_dir.path(), today, ".txt").unwrap();
         assert_eq!(result.len(), 2);
 
         // Search from subdir - should find only sub.txt
-        let result = find_files_by_date(&subdir, today, ".txt").unwrap();
+        let result = find_files(&subdir, today, ".txt").unwrap();
         assert_eq!(result.len(), 1);
         assert!(result[0].contains("sub.txt"));
     }
@@ -306,7 +306,7 @@ mod tests {
         File::create(level2.join("file2.go")).unwrap();
 
         let today = Local::now().date_naive();
-        let result = find_files_by_date(temp_dir.path(), today, ".go").unwrap();
+        let result = find_files(temp_dir.path(), today, ".go").unwrap();
 
         assert_eq!(result.len(), 3);
     }
