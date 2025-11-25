@@ -55,30 +55,39 @@ fn find_files_by_date(
     let mut matching_files = Vec::new();
 
     for entry in WalkDir::new(start_path).into_iter().filter_map(|e| e.ok()) {
-        if entry.file_type().is_file() {
-            let path = entry.path();
+        if !entry.file_type().is_file() {
+            continue;
+        }
 
-            // Check if file has the required suffix
-            if let Some(file_name) = path.file_name() {
-                if let Some(name_str) = file_name.to_str() {
-                    if !name_str.ends_with(suffix) {
-                        continue;
-                    }
-                }
-            }
+        let path = entry.path();
 
-            if let Ok(metadata) = fs::metadata(path) {
-                if let Ok(modified) = metadata.modified() {
-                    let datetime: DateTime<Local> = modified.into();
-                    let file_date = datetime.date_naive();
+        // Check if file has the required suffix
+        let Some(file_name) = path.file_name() else {
+            continue;
+        };
+        let Some(name_str) = file_name.to_str() else {
+            continue;
+        };
+        if !name_str.ends_with(suffix) {
+            continue;
+        }
 
-                    if file_date == target_date {
-                        if let Some(path_str) = path.to_str() {
-                            matching_files.push(path_str.to_string());
-                        }
-                    }
-                }
-            }
+        // Check modification date
+        let Ok(metadata) = fs::metadata(path) else {
+            continue;
+        };
+        let Ok(modified) = metadata.modified() else {
+            continue;
+        };
+
+        let datetime: DateTime<Local> = modified.into();
+        let file_date = datetime.date_naive();
+
+        if file_date == target_date {
+            let Some(path_str) = path.to_str() else {
+                continue;
+            };
+            matching_files.push(path_str.to_string());
         }
     }
 
