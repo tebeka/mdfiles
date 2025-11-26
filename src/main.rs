@@ -55,14 +55,14 @@ fn file_iterator(root: &Path) -> impl Iterator<Item = PathBuf> + '_ {
         .map(|e| e.path().to_path_buf())
 }
 
-fn with_suffix(path: &PathBuf, suffix: &str) -> bool {
+fn has_suffix(path: &PathBuf, suffix: &str) -> bool {
     path.file_name()
         .and_then(|n| n.to_str())
         .map(|s| s.ends_with(suffix))
         .unwrap_or(false)
 }
 
-fn with_date(path: &PathBuf, target_date: NaiveDate) -> bool {
+fn match_date(path: &PathBuf, target_date: NaiveDate) -> bool {
     fs::metadata(path)
         .and_then(|m| m.modified())
         .map(|modified| {
@@ -90,8 +90,8 @@ fn main() {
     }
 
     let files = file_iterator(root_path)
-        .filter(|path| with_suffix(path, &args.suffix))
-        .filter(|path| with_date(path, date));
+        .filter(|path| has_suffix(path, &args.suffix))
+        .filter(|path| match_date(path, date));
 
     for file in files {
         println!("{}", format_as_markdown(file.to_str().unwrap_or("")));
@@ -172,8 +172,8 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let date = Local::now().date_naive();
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".txt"))
-            .filter(|path| with_date(path, date))
+            .filter(|path| has_suffix(path, ".txt"))
+            .filter(|path| match_date(path, date))
             .collect();
         assert!(result.is_empty() || !result.is_empty()); // Always ok
     }
@@ -188,8 +188,8 @@ mod tests {
 
         let today = Local::now().date_naive();
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".txt"))
-            .filter(|path| with_date(path, today))
+            .filter(|path| has_suffix(path, ".txt"))
+            .filter(|path| match_date(path, today))
             .collect();
 
         assert!(result.iter().any(|p| p.to_str().unwrap().contains("test.txt")));
@@ -200,8 +200,8 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let date = Local::now().date_naive();
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".txt"))
-            .filter(|path| with_date(path, date))
+            .filter(|path| has_suffix(path, ".txt"))
+            .filter(|path| match_date(path, date))
             .collect();
         assert_eq!(result.len(), 0);
     }
@@ -214,8 +214,8 @@ mod tests {
 
         let old_date = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".txt"))
-            .filter(|path| with_date(path, old_date))
+            .filter(|path| has_suffix(path, ".txt"))
+            .filter(|path| match_date(path, old_date))
             .collect();
 
         assert_eq!(result.len(), 0);
@@ -234,24 +234,24 @@ mod tests {
 
         // Test .go suffix
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".go"))
-            .filter(|path| with_date(path, today))
+            .filter(|path| has_suffix(path, ".go"))
+            .filter(|path| match_date(path, today))
             .collect();
         assert_eq!(result.len(), 1);
         assert!(result[0].to_str().unwrap().ends_with(".go"));
 
         // Test .txt suffix
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".txt"))
-            .filter(|path| with_date(path, today))
+            .filter(|path| has_suffix(path, ".txt"))
+            .filter(|path| match_date(path, today))
             .collect();
         assert_eq!(result.len(), 1);
         assert!(result[0].to_str().unwrap().ends_with(".txt"));
 
         // Test .rs suffix
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".rs"))
-            .filter(|path| with_date(path, today))
+            .filter(|path| has_suffix(path, ".rs"))
+            .filter(|path| match_date(path, today))
             .collect();
         assert_eq!(result.len(), 1);
         assert!(result[0].to_str().unwrap().ends_with(".rs"));
@@ -264,8 +264,8 @@ mod tests {
 
         let today = Local::now().date_naive();
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".go"))
-            .filter(|path| with_date(path, today))
+            .filter(|path| has_suffix(path, ".go"))
+            .filter(|path| match_date(path, today))
             .collect();
 
         assert_eq!(result.len(), 0);
@@ -284,15 +284,15 @@ mod tests {
 
         // Search from root - should find both
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".txt"))
-            .filter(|path| with_date(path, today))
+            .filter(|path| has_suffix(path, ".txt"))
+            .filter(|path| match_date(path, today))
             .collect();
         assert_eq!(result.len(), 2);
 
         // Search from subdir - should find only sub.txt
         let result: Vec<_> = file_iterator(&subdir)
-            .filter(|path| with_suffix(path, ".txt"))
-            .filter(|path| with_date(path, today))
+            .filter(|path| has_suffix(path, ".txt"))
+            .filter(|path| match_date(path, today))
             .collect();
         assert_eq!(result.len(), 1);
         assert!(result[0].to_str().unwrap().contains("sub.txt"));
@@ -311,8 +311,8 @@ mod tests {
 
         let today = Local::now().date_naive();
         let result: Vec<_> = file_iterator(temp_dir.path())
-            .filter(|path| with_suffix(path, ".go"))
-            .filter(|path| with_date(path, today))
+            .filter(|path| has_suffix(path, ".go"))
+            .filter(|path| match_date(path, today))
             .collect();
 
         assert_eq!(result.len(), 3);
