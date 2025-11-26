@@ -38,8 +38,7 @@ fn get_date(date_str: Option<&str>) -> Result<NaiveDate, String> {
 }
 
 fn format_as_markdown(path: &str) -> String {
-    let path_obj = Path::new(path);
-    let filename = path_obj
+    let filename = Path::new(path)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or(path);
