@@ -55,14 +55,14 @@ fn file_iterator(root: &Path) -> impl Iterator<Item = PathBuf> + '_ {
         .map(|e| e.path().to_path_buf())
 }
 
-fn has_suffix(path: &PathBuf, suffix: &str) -> bool {
+fn has_suffix(path: &Path, suffix: &str) -> bool {
     path.file_name()
         .and_then(|n| n.to_str())
         .map(|s| s.ends_with(suffix))
         .unwrap_or(false)
 }
 
-fn match_date(path: &PathBuf, target_date: NaiveDate) -> bool {
+fn match_date(path: &Path, target_date: NaiveDate) -> bool {
     fs::metadata(path)
         .and_then(|m| m.modified())
         .map(|modified| {
@@ -192,7 +192,11 @@ mod tests {
             .filter(|path| match_date(path, today))
             .collect();
 
-        assert!(result.iter().any(|p| p.to_str().unwrap().contains("test.txt")));
+        assert!(
+            result
+                .iter()
+                .any(|p| p.to_str().unwrap().contains("test.txt"))
+        );
     }
 
     #[test]
