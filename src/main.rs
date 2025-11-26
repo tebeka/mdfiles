@@ -32,7 +32,7 @@ struct Args {
 fn get_date(date_str: Option<&str>) -> Result<NaiveDate, String> {
     match date_str {
         Some(s) => NaiveDate::parse_from_str(s, "%Y-%m-%d")
-            .map_err(|_| "Invalid date format. Use YYYY-MM-DD".to_string()),
+            .map_err(|_| "invalid date format (should be YYYY-MM-DD)".to_string()),
         None => Ok(chrono::Local::now().date_naive()),
     }
 }
@@ -100,14 +100,14 @@ fn main() {
     let date = match get_date(args.date.as_deref()) {
         Ok(d) => d,
         Err(e) => {
-            eprintln!("Error: {}", e);
+            eprintln!("error: {}", e);
             std::process::exit(1);
         }
     };
 
     let root_path = Path::new(&args.root);
     if !root_path.exists() {
-        eprintln!("Error: Root directory '{}' does not exist", args.root);
+        eprintln!("error: root directory '{}' does not exist", args.root);
         std::process::exit(1);
     }
 
@@ -118,7 +118,7 @@ fn main() {
             }
         }
         Err(e) => {
-            eprintln!("Error: {}", e);
+            eprintln!("error: {}", e);
             std::process::exit(1);
         }
     }
