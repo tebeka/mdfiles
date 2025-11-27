@@ -88,9 +88,12 @@ fn main() {
         std::process::exit(1);
     }
 
-    let files = file_iterator(root_path)
+    let mut files: Vec<_> = file_iterator(root_path)
         .filter(|path| has_suffix(path, &args.suffix))
-        .filter(|path| match_date(path, date));
+        .filter(|path| match_date(path, date))
+        .collect();
+
+    files.sort_by_key(|path| fs::metadata(path).and_then(|m| m.modified()).ok());
 
     for file in files {
         println!("{}", format_as_markdown(file.to_str().unwrap_or("")));
